@@ -276,8 +276,8 @@ code {
   overflow: hidden;
   --frame-native-width: 910px;
   --frame-native-height: 760px;
-  --frame-crop-top: 74px;
-  --frame-crop-bottom: 112px;
+  --frame-crop-top: 12px;
+  --frame-crop-bottom: 28px;
   --frame-scale: 1;
   height: calc(var(--frame-native-height) * var(--frame-scale));
   border-top: 1px solid #e8dece;
