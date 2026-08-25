@@ -273,7 +273,7 @@ code {
 
 .reader-frame {
   position: relative;
-  overflow: hidden;
+  overflow: auto;
   --frame-native-width: 910px;
   --frame-native-height: 760px;
   --frame-scale: 1;
@@ -281,6 +281,8 @@ code {
   border-top: 1px solid #e8dece;
   border-bottom: 1px solid #e8dece;
   background: #f8f8f6;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 iframe {
@@ -291,6 +293,15 @@ iframe {
   background: #fff;
   pointer-events: none;
   user-select: none;
+}
+
+.sutra-page-image {
+  display: block;
+  width: min(100%, 720px);
+  height: auto;
+  margin: 0 auto;
+  background: #fff;
+  box-shadow: 0 1px 10px rgba(44, 38, 30, 0.18);
 }
 
 .reader-actions {

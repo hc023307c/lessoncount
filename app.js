@@ -52,6 +52,11 @@ function officialPageUrl(page) {
   return `${config.sourceUrl}index.html#p=${safePage}`;
 }
 
+function pageImageUrl(page) {
+  const safePage = clampPage(page);
+  return `${config.sourceUrl}files/mobile/${safePage}.jpg`;
+}
+
 function basicPageUrl(page) {
   const safePage = clampPage(page);
   return safePage === 1
@@ -158,7 +163,7 @@ function render() {
           </div>
 
           <div class="reader-frame">
-            <iframe title="${config.sutraTitle} official source page ${state.page}" src="${officialPageUrl(state.page)}" loading="eager" referrerpolicy="no-referrer"></iframe>
+            <img class="sutra-page-image" src="${pageImageUrl(state.page)}" alt="${config.sutraTitle} page ${state.page}" loading="eager" referrerpolicy="no-referrer" />
           </div>
 
           <div class="reader-actions">
