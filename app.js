@@ -8,6 +8,7 @@ const config = {
   sutraTitle: "\u89c0\u4e16\u97f3\u83e9\u85a9\u666e\u9580\u54c1",
   sourceUrl: "https://sutra.ddm.org.tw/ebook/22/",
   basicHtmlBaseUrl: "https://sutra.ddm.org.tw/ebook/22/files/basic-html",
+  authRedirectUrl: runtimeConfig.authRedirectUrl || `${window.location.origin}${window.location.pathname}`,
 };
 
 const supabase =
@@ -220,7 +221,7 @@ function bindAuth() {
 
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: window.location.origin + window.location.pathname },
+      options: { emailRedirectTo: config.authRedirectUrl },
     });
 
     state.notice = error ? error.message : "Check your email for the sign-in link.";
