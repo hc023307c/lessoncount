@@ -164,7 +164,6 @@ function render() {
           <div class="reader-actions">
             <a href="${officialPageUrl(state.page)}" target="_blank" rel="noopener noreferrer">Open official page</a>
             <a href="${basicPageUrl(state.page)}" target="_blank" rel="noopener noreferrer">Basic page</a>
-            <button id="new-cycle" class="text-button" type="button">Start new cycle</button>
           </div>
           <p class="reader-hint">Use the floating side buttons to keep page tracking accurate.</p>
         </section>
@@ -250,7 +249,6 @@ function bindApp() {
     setPage(Number(event.target.value || 1));
   });
 
-  document.querySelector("#new-cycle")?.addEventListener("click", startNewCycle);
 }
 
 function updateFrameScale() {
@@ -438,16 +436,22 @@ async function setPage(page) {
 
 async function advancePage() {
   if (state.page >= config.totalPages) {
-    if (state.currentCycleCompleted) {
-      await startNewCycle();
-      return;
-    }
-
-    await completeCycle({ restart: true, confirm: false });
+    await finishAndStartNextCycle();
     return;
   }
 
   await setPage(state.page + 1);
+}
+
+async function finishAndStartNextCycle() {
+  if (!state.user) return;
+
+  if (state.currentCycleCompleted) {
+    await startNewCycle();
+    return;
+  }
+
+  await completeCycle({ restart: true, confirm: false });
 }
 
 async function saveProgress() {
@@ -507,11 +511,11 @@ async function completeCycle(options = {}) {
 
   if (error) {
     state.notice = error.code === "23505" ? "This reading cycle was already counted." : error.message;
+    if (error.code !== "23505") {
+      render();
+      return;
+    }
   }
-
-  state.currentCycleCompleted = true;
-  await saveProgress();
-  await loadCompletions();
 
   if (shouldRestart) {
     state.page = 1;
@@ -519,8 +523,14 @@ async function completeCycle(options = {}) {
     state.currentCycleCompleted = false;
     cacheProgress();
     await saveProgress();
+    await loadCompletions();
+    render();
+    return;
   }
 
+  state.currentCycleCompleted = true;
+  await saveProgress();
+  await loadCompletions();
   render();
 }
 
