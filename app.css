@@ -274,6 +274,10 @@ code {
 .reader-frame {
   position: relative;
   overflow: hidden;
+  --frame-native-width: 910px;
+  --frame-native-height: 760px;
+  --frame-scale: 1;
+  height: calc(var(--frame-native-height) * var(--frame-scale));
   border-top: 1px solid #e8dece;
   border-bottom: 1px solid #e8dece;
   background: #f8f8f6;
@@ -281,10 +285,12 @@ code {
 
 iframe {
   display: block;
-  width: 100%;
-  height: clamp(500px, 70svh, 780px);
+  width: var(--frame-native-width);
+  height: var(--frame-native-height);
   border: 0;
   background: #fff;
+  transform: scale(var(--frame-scale));
+  transform-origin: 0 0;
 }
 
 .frame-nav {
@@ -514,7 +520,7 @@ footer {
     grid-template-columns: 1fr;
   }
 
-  iframe {
-    height: clamp(640px, 76svh, 900px);
+  .reader-frame {
+    height: calc(var(--frame-native-height) * var(--frame-scale));
   }
 }

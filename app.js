@@ -200,6 +200,7 @@ function render() {
   `;
 
   bindApp();
+  updateFrameScale();
 }
 
 function bindAuth() {
@@ -241,12 +242,28 @@ function bindApp() {
 }
 
 async function handleFrameLoad() {
+  updateFrameScale();
+
   if (state.ignoreNextFrameLoad) {
     state.ignoreNextFrameLoad = false;
     return;
   }
 
   await advancePage();
+}
+
+function updateFrameScale() {
+  const frame = document.querySelector(".reader-frame");
+  if (!frame) return;
+
+  const nativeWidth = 910;
+  const availableWidth = frame.clientWidth;
+  const scale = Math.min(availableWidth / nativeWidth, 1);
+  const targetVisualHeight = Math.min(Math.max(window.innerHeight * 0.72, 520), 860);
+  const nativeHeight = Math.ceil(targetVisualHeight / scale);
+
+  frame.style.setProperty("--frame-scale", String(scale));
+  frame.style.setProperty("--frame-native-height", `${nativeHeight}px`);
 }
 
 async function loadSession() {
@@ -483,6 +500,8 @@ window.addEventListener("offline", () => {
   state.online = false;
   render();
 });
+
+window.addEventListener("resize", updateFrameScale);
 
 render();
 loadSession();
