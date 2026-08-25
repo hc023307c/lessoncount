@@ -273,10 +273,13 @@ code {
 
 .reader-frame {
   position: relative;
-  overflow: auto;
+  display: grid;
+  overflow: hidden;
   --frame-native-width: 910px;
   --frame-native-height: 760px;
   --frame-scale: 1;
+  align-items: center;
+  justify-items: center;
   height: calc(var(--frame-native-height) * var(--frame-scale));
   border-top: 1px solid #e8dece;
   border-bottom: 1px solid #e8dece;
@@ -297,9 +300,12 @@ iframe {
 
 .sutra-page-image {
   display: block;
-  width: min(100%, 720px);
-  height: auto;
+  width: auto;
+  max-width: 100%;
+  height: 100%;
+  max-height: 100%;
   margin: 0 auto;
+  object-fit: contain;
   background: #fff;
   box-shadow: 0 1px 10px rgba(44, 38, 30, 0.18);
 }

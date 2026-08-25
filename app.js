@@ -278,7 +278,12 @@ function updateFrameScale() {
   const nativeWidth = 910;
   const availableWidth = frame.clientWidth;
   const scale = 1;
-  const targetVisualHeight = Math.min(Math.max(window.innerHeight * 0.72, 540), 880);
+  const compactViewport = window.innerWidth <= 720;
+  const viewport = window.visualViewport;
+  const visibleHeight = viewport?.height || window.innerHeight;
+  const targetVisualHeight = compactViewport
+    ? Math.min(Math.max(visibleHeight * 0.74, 520), visibleHeight - 120)
+    : Math.min(Math.max(visibleHeight * 0.72, 540), 880);
   const nativeHeight = Math.ceil(targetVisualHeight);
 
   frame.style.setProperty("--frame-scale", String(scale));
