@@ -300,12 +300,11 @@ iframe {
 
 .sutra-page-image {
   display: block;
-  width: auto;
-  max-width: 100%;
-  height: calc(100% * var(--page-image-scale, 0.86));
-  max-height: calc(100% * var(--page-image-scale, 0.86));
+  width: 100%;
+  height: 100%;
   margin: 0 auto;
   object-fit: contain;
+  transform: scale(var(--page-image-scale, 0.86));
   background: #fff;
   box-shadow: 0 1px 10px rgba(44, 38, 30, 0.18);
 }
