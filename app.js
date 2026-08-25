@@ -72,8 +72,8 @@ function canComplete(page, isCompleted) {
 
 function loadPageImageScale() {
   const stored = Number(localStorage.getItem(pageImageScaleKey));
-  if (Number.isFinite(stored) && stored >= 0.7 && stored <= 1) return stored;
-  return window.innerWidth <= 720 ? 0.86 : 1;
+  if (Number.isFinite(stored) && stored >= 0.5 && stored <= 1) return stored;
+  return window.innerWidth <= 720 ? 0.68 : 1;
 }
 
 function formatScalePercent(scale) {
@@ -184,7 +184,7 @@ function render() {
           </div>
           <div class="image-size-control">
             <label for="image-size">Size</label>
-            <input id="image-size" type="range" min="70" max="100" step="2" value="${Math.round(state.pageImageScale * 100)}" />
+            <input id="image-size" type="range" min="50" max="100" step="2" value="${Math.round(state.pageImageScale * 100)}" />
             <strong id="image-size-value">${formatScalePercent(state.pageImageScale)}</strong>
           </div>
           <p class="reader-hint">Use the floating side buttons to keep page tracking accurate.</p>
@@ -293,7 +293,7 @@ function bindApp() {
 }
 
 function setPageImageScale(scale) {
-  const nextScale = Math.min(Math.max(scale, 0.7), 1);
+  const nextScale = Math.min(Math.max(scale, 0.5), 1);
   state.pageImageScale = nextScale;
   localStorage.setItem(pageImageScaleKey, String(nextScale));
   document.querySelector(".sutra-page-image")?.style.setProperty("--page-image-scale", String(nextScale));

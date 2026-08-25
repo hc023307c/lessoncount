@@ -278,7 +278,7 @@ code {
   --frame-native-width: 910px;
   --frame-native-height: 760px;
   --frame-scale: 1;
-  align-items: center;
+  align-items: start;
   justify-items: center;
   height: calc(var(--frame-native-height) * var(--frame-scale));
   border-top: 1px solid #e8dece;
@@ -304,7 +304,8 @@ iframe {
   height: 100%;
   margin: 0 auto;
   object-fit: contain;
-  transform: scale(var(--page-image-scale, 0.86));
+  transform: scale(var(--page-image-scale, 0.68));
+  transform-origin: top center;
   background: #fff;
   box-shadow: 0 1px 10px rgba(44, 38, 30, 0.18);
 }
