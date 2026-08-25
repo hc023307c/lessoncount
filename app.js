@@ -49,6 +49,11 @@ function clampPage(page, totalPages = config.totalPages) {
 
 function officialPageUrl(page) {
   const safePage = clampPage(page);
+  return `${config.sourceUrl}index.html#p=${safePage}`;
+}
+
+function basicPageUrl(page) {
+  const safePage = clampPage(page);
   return safePage === 1
     ? `${config.basicHtmlBaseUrl}/index.html`
     : `${config.basicHtmlBaseUrl}/page${safePage}.html`;
@@ -153,11 +158,12 @@ function render() {
           </div>
 
           <div class="reader-frame">
-            <iframe title="${config.sutraTitle} official source page ${state.page}" src="${officialPageUrl(state.page)}" loading="lazy" referrerpolicy="no-referrer"></iframe>
+            <iframe title="${config.sutraTitle} official source page ${state.page}" src="${officialPageUrl(state.page)}" loading="eager" referrerpolicy="no-referrer"></iframe>
           </div>
 
           <div class="reader-actions">
             <a href="${officialPageUrl(state.page)}" target="_blank" rel="noopener noreferrer">Open official page</a>
+            <a href="${basicPageUrl(state.page)}" target="_blank" rel="noopener noreferrer">Basic page</a>
             <button id="new-cycle" class="text-button" type="button">Start new cycle</button>
           </div>
         </section>
@@ -265,17 +271,19 @@ function updateFrameScale() {
 
   const nativeWidth = 910;
   const availableWidth = frame.clientWidth;
-  const scale = Math.min(availableWidth / nativeWidth, 1);
-  const targetVisualHeight = Math.min(Math.max(window.innerHeight * 0.72, 520), 860);
-  const nativeHeight = Math.ceil(targetVisualHeight / scale);
+  const scale = 1;
+  const targetVisualHeight = Math.min(Math.max(window.innerHeight * 0.72, 540), 880);
+  const nativeHeight = Math.ceil(targetVisualHeight);
 
   frame.style.setProperty("--frame-scale", String(scale));
+  frame.style.setProperty("--frame-native-width", `${Math.max(availableWidth, nativeWidth)}px`);
   frame.style.setProperty("--frame-native-height", `${nativeHeight}px`);
 }
 
 function updateFloatingControls() {
   const viewport = window.visualViewport;
-  const scale = viewport?.scale ? 1 / viewport.scale : 1;
+  const rawScale = viewport?.scale ? 1 / viewport.scale : 1;
+  const scale = Math.min(Math.max(rawScale, 0.5), 1);
   const top = viewport ? viewport.offsetTop + viewport.height * 0.56 : window.innerHeight * 0.56;
   const right = viewport ? window.innerWidth - viewport.offsetLeft - viewport.width : 0;
   const left = viewport ? viewport.offsetLeft : 0;

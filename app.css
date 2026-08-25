@@ -285,12 +285,10 @@ code {
 
 iframe {
   display: block;
-  width: var(--frame-native-width);
+  width: 100%;
   height: var(--frame-native-height);
   border: 0;
   background: #fff;
-  transform: scale(var(--frame-scale));
-  transform-origin: 0 0;
 }
 
 .reader-actions {
@@ -317,9 +315,9 @@ iframe {
   top: var(--control-top);
   z-index: 41;
   display: grid;
-  width: 44px;
-  height: 44px;
-  min-height: 44px;
+  width: 38px;
+  height: 38px;
+  min-height: 38px;
   place-items: center;
   border: 1px solid rgba(18, 83, 78, 0.5);
   border-radius: 999px;
@@ -335,7 +333,7 @@ iframe {
 }
 
 .floating-nav::before {
-  font-size: 2.15rem;
+  font-size: 1.85rem;
   line-height: 1;
 }
 
@@ -345,7 +343,7 @@ iframe {
 }
 
 .floating-nav-left {
-  left: calc(var(--control-left) + max(4px, env(safe-area-inset-left)));
+  left: calc(var(--control-left) + max(6px, env(safe-area-inset-left)));
 }
 
 .floating-nav-left::before {
@@ -355,7 +353,7 @@ iframe {
 .floating-next-group {
   position: fixed;
   top: var(--control-top);
-  right: calc(var(--control-right) + max(4px, env(safe-area-inset-right)));
+  right: calc(var(--control-right) + max(6px, env(safe-area-inset-right)));
   z-index: 41;
   display: grid;
   gap: 5px;
@@ -375,7 +373,7 @@ iframe {
 }
 
 .finish-nav {
-  width: 62px;
+  width: 58px;
   border-radius: 999px;
   background: rgba(126, 214, 207, 0.94);
 }
@@ -395,13 +393,13 @@ iframe {
 }
 
 .today-badge {
-  min-width: 62px;
+  min-width: 54px;
   border: 1px solid rgba(18, 83, 78, 0.44);
   border-radius: 999px;
-  padding: 4px 7px;
+  padding: 4px 6px;
   background: rgba(255, 253, 250, 0.9);
   color: #083d39;
-  font-size: 0.72rem;
+  font-size: 0.66rem;
   font-weight: 900;
   line-height: 1;
   text-align: center;
@@ -511,18 +509,18 @@ footer {
   }
 
   .floating-nav {
-    width: 40px;
-    height: 40px;
-    min-height: 40px;
+    width: 36px;
+    height: 36px;
+    min-height: 36px;
   }
 
   .finish-nav {
-    width: 58px;
+    width: 54px;
   }
 
   .today-badge {
-    min-width: 58px;
-    font-size: 0.68rem;
+    min-width: 52px;
+    font-size: 0.64rem;
   }
 }
 
