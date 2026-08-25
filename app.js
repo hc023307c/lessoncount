@@ -166,6 +166,7 @@ function render() {
             <a href="${basicPageUrl(state.page)}" target="_blank" rel="noopener noreferrer">Basic page</a>
             <button id="new-cycle" class="text-button" type="button">Start new cycle</button>
           </div>
+          <p class="reader-hint">Use the floating side buttons to keep page tracking accurate.</p>
         </section>
 
         <aside class="stats-panel" aria-label="Practice records">
@@ -239,8 +240,6 @@ function bindApp() {
 
   document.querySelector("#previous-page")?.addEventListener("click", () => setPage(state.page - 1));
   document.querySelector("#next-page")?.addEventListener("click", advancePage);
-  document.querySelector("iframe")?.addEventListener("load", handleFrameLoad);
-
   document.querySelector("#page-form")?.addEventListener("submit", (event) => {
     event.preventDefault();
     const input = document.querySelector("#page-input");
@@ -252,17 +251,6 @@ function bindApp() {
   });
 
   document.querySelector("#new-cycle")?.addEventListener("click", startNewCycle);
-}
-
-async function handleFrameLoad() {
-  updateFrameScale();
-
-  if (state.ignoreNextFrameLoad) {
-    state.ignoreNextFrameLoad = false;
-    return;
-  }
-
-  await advancePage();
 }
 
 function updateFrameScale() {
