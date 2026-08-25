@@ -18,6 +18,7 @@ const supabase =
           detectSessionInUrl: true,
           persistSession: true,
           autoRefreshToken: true,
+          flowType: "implicit",
         },
       })
     : null;
