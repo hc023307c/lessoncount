@@ -300,16 +300,7 @@ async function loadSession() {
     return;
   }
 
-  const url = new URL(window.location.href);
-  const code = url.searchParams.get("code");
-  if (code) {
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (error) {
-      state.notice = error.message;
-    } else {
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  }
+  await handleAuthRedirect();
 
   const { data } = await supabase.auth.getSession();
   state.session = data.session;
@@ -324,6 +315,42 @@ async function loadSession() {
 
   if (state.user) await hydrateUserState();
   render();
+}
+
+async function handleAuthRedirect() {
+  const url = new URL(window.location.href);
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  const accessToken = hash.get("access_token");
+  const refreshToken = hash.get("refresh_token");
+  const hashError = hash.get("error_description") || hash.get("error");
+
+  if (hashError) {
+    state.notice = hashError;
+    window.history.replaceState({}, document.title, window.location.pathname);
+    return;
+  }
+
+  if (accessToken && refreshToken) {
+    const { error } = await supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
+
+    state.notice = error ? error.message : "";
+    window.history.replaceState({}, document.title, window.location.pathname);
+    return;
+  }
+
+  const code = url.searchParams.get("code");
+  if (!code) return;
+
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  if (error) {
+    state.notice = `${error.message}. Please request a new sign-in link from the same browser.`;
+  } else {
+    state.notice = "";
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
 }
 
 async function hydrateUserState() {
