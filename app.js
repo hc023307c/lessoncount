@@ -108,8 +108,6 @@ function render() {
   const completionAvailable = canComplete(state.page, state.currentCycleCompleted);
   const progressPercent = Math.round((state.page / config.totalPages) * 100);
   const cycleLabel = state.currentCycleCompleted ? "Cycle counted" : "Current cycle active";
-  const nextLabel = state.page >= config.totalPages ? "Finish + Next" : "Next";
-
   state.ignoreNextFrameLoad = true;
 
   app.innerHTML = `
@@ -125,88 +123,78 @@ function render() {
         </div>
       </header>
 
-      <section class="dashboard" aria-label="Practice status">
-        <article class="progress-card">
-          <div class="progress-card-header">
-            <span>Current page</span>
-            <strong>${state.page} / ${config.totalPages}</strong>
-          </div>
-          <div class="progress-track" aria-label="Reading progress">
-            <span style="width: ${progressPercent}%"></span>
-          </div>
-          <small>${progressPercent}% complete</small>
-        </article>
-        <article><span>Total</span><strong>${state.stats.total}</strong></article>
-        <article><span>Today</span><strong>${state.stats.today}</strong></article>
-        <article><span>Last</span><strong>${formatDateTime(state.stats.lastCompletionTime)}</strong></article>
-      </section>
-
-      <section class="reader">
-        ${
-          completionAvailable
-            ? `<div class="completion-banner">
-                <div>
-                  <strong>Final page reached</strong>
-                  <span>Confirm once to record this practice.</span>
-                </div>
-                <button id="complete-cycle-top" type="button">Confirm completion</button>
-              </div>`
-            : ""
-        }
-        <div class="reader-toolbar">
-          <button id="previous-page" class="nav-button" type="button" ${state.page <= 1 ? "disabled" : ""}>Previous</button>
-          <form id="page-form" class="page-form">
-            <label for="page-input">Page</label>
-            <div class="page-input-row">
-              <input id="page-input" name="page" type="number" min="1" max="${config.totalPages}" value="${state.page}" />
-              <span>/ ${config.totalPages}</span>
-            </div>
-          </form>
+      <div class="practice-layout">
+        <section class="reader">
           ${
             completionAvailable
-              ? `<button id="next-page" class="nav-button primary-action" type="button">${nextLabel}</button>`
-              : `<button id="next-page" class="nav-button" type="button">${nextLabel}</button>`
+              ? `<div class="completion-banner">
+                  <div>
+                    <strong>Final page reached</strong>
+                    <span>Tap the right side to count this practice and return to page 1.</span>
+                  </div>
+                </div>`
+              : ""
           }
-        </div>
+          <div class="reader-meta">
+            <form id="page-form" class="page-form">
+              <label for="page-input">Page</label>
+              <div class="page-input-row">
+                <input id="page-input" name="page" type="number" min="1" max="${config.totalPages}" value="${state.page}" />
+                <span>/ ${config.totalPages}</span>
+              </div>
+            </form>
+            <div class="mini-progress">
+              <div class="progress-track" aria-label="Reading progress">
+                <span style="width: ${progressPercent}%"></span>
+              </div>
+              <small>${progressPercent}% complete</small>
+            </div>
+          </div>
 
-        <div class="reader-frame">
-          <iframe title="${config.sutraTitle} official source page ${state.page}" src="${officialPageUrl(state.page)}" loading="lazy" referrerpolicy="no-referrer"></iframe>
-        </div>
+          <div class="reader-frame">
+            <iframe title="${config.sutraTitle} official source page ${state.page}" src="${officialPageUrl(state.page)}" loading="lazy" referrerpolicy="no-referrer"></iframe>
+            <button id="previous-page" class="frame-nav frame-nav-left" type="button" ${state.page <= 1 ? "disabled" : ""} aria-label="Previous page">
+              <span>Previous</span>
+            </button>
+            <button id="next-page" class="frame-nav frame-nav-right ${completionAvailable ? "finish-nav" : ""}" type="button" aria-label="${completionAvailable ? "Finish practice and go to page 1" : "Next page"}">
+              <span>${completionAvailable ? "Finish" : "Next"}</span>
+            </button>
+          </div>
 
-        <div class="reader-actions">
-          <a href="${officialPageUrl(state.page)}" target="_blank" rel="noopener noreferrer">Open official page</a>
-          <button id="new-cycle" class="text-button" type="button">Start new cycle</button>
-        </div>
-      </section>
+          <div class="reader-actions">
+            <a href="${officialPageUrl(state.page)}" target="_blank" rel="noopener noreferrer">Open official page</a>
+            <button id="new-cycle" class="text-button" type="button">Start new cycle</button>
+          </div>
+        </section>
 
-      <section class="history">
-        <div class="section-title">
-          <h2>Recent completions</h2>
-          <span>${cycleLabel}</span>
-        </div>
-        ${
-          state.completions.length
-            ? `<ol>${state.completions
-                .map((item) => `<li><time>${formatDateTime(item.completed_at)}</time><span>Page ${item.completed_page}</span></li>`)
-                .join("")}</ol>`
-            : "<p>No completions yet.</p>"
-        }
-      </section>
+        <aside class="stats-panel" aria-label="Practice records">
+          <section class="dashboard">
+            <article><span>Total completed</span><strong>${state.stats.total}</strong></article>
+            <article><span>Today</span><strong>${state.stats.today}</strong></article>
+            <article><span>Last completion</span><strong>${formatDateTime(state.stats.lastCompletionTime)}</strong></article>
+            <article><span>Status</span><strong>${cycleLabel}</strong></article>
+          </section>
+
+          <section class="history">
+            <div class="section-title">
+              <h2>Recent completions</h2>
+            </div>
+            ${
+              state.completions.length
+                ? `<ol>${state.completions
+                    .map((item) => `<li><time>${formatDateTime(item.completed_at)}</time><span>Page ${item.completed_page}</span></li>`)
+                    .join("")}</ol>`
+                : "<p>No completions yet.</p>"
+            }
+          </section>
+        </aside>
+      </div>
 
       <footer>
         <span>Official source only. Sutra content is not copied or redistributed.</span>
         <a href="${config.sourceUrl}" target="_blank" rel="noopener noreferrer">Attribution</a>
       </footer>
 
-      <nav class="mobile-action-bar" aria-label="Reading controls">
-        <button id="previous-page-mobile" type="button" ${state.page <= 1 ? "disabled" : ""}>Previous</button>
-        <span>${state.page} / ${config.totalPages}</span>
-        ${
-          completionAvailable
-            ? `<button id="next-page-mobile" class="primary-action" type="button">${nextLabel}</button>`
-            : `<button id="next-page-mobile" type="button">${nextLabel}</button>`
-        }
-      </nav>
     </main>
   `;
 
@@ -236,8 +224,6 @@ function bindApp() {
 
   document.querySelector("#previous-page")?.addEventListener("click", () => setPage(state.page - 1));
   document.querySelector("#next-page")?.addEventListener("click", advancePage);
-  document.querySelector("#previous-page-mobile")?.addEventListener("click", () => setPage(state.page - 1));
-  document.querySelector("#next-page-mobile")?.addEventListener("click", advancePage);
   document.querySelector("iframe")?.addEventListener("load", handleFrameLoad);
 
   document.querySelector("#page-form")?.addEventListener("submit", (event) => {
@@ -250,7 +236,6 @@ function bindApp() {
     setPage(Number(event.target.value || 1));
   });
 
-  document.querySelector("#complete-cycle-top")?.addEventListener("click", completeCycle);
   document.querySelector("#new-cycle")?.addEventListener("click", startNewCycle);
 }
 
