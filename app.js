@@ -25,6 +25,7 @@ const supabase =
 
 const progressCacheKey = "lessoncount.progress";
 const pendingPageKey = "lessoncount.pendingPage";
+const pageImageScaleKey = "lessoncount.pageImageScale";
 
 const state = {
   session: null,
@@ -38,6 +39,7 @@ const state = {
   online: navigator.onLine,
   notice: "",
   ignoreNextFrameLoad: true,
+  pageImageScale: loadPageImageScale(),
 };
 
 const app = document.querySelector("#app");
@@ -66,6 +68,16 @@ function basicPageUrl(page) {
 
 function canComplete(page, isCompleted) {
   return page >= config.totalPages && !isCompleted;
+}
+
+function loadPageImageScale() {
+  const stored = Number(localStorage.getItem(pageImageScaleKey));
+  if (Number.isFinite(stored) && stored >= 0.7 && stored <= 1) return stored;
+  return window.innerWidth <= 720 ? 0.86 : 1;
+}
+
+function formatScalePercent(scale) {
+  return `${Math.round(scale * 100)}%`;
 }
 
 function localDayRange(now = new Date()) {
@@ -163,12 +175,17 @@ function render() {
           </div>
 
           <div class="reader-frame">
-            <img class="sutra-page-image" src="${pageImageUrl(state.page)}" alt="${config.sutraTitle} page ${state.page}" loading="eager" referrerpolicy="no-referrer" />
+            <img class="sutra-page-image" style="--page-image-scale: ${state.pageImageScale}" src="${pageImageUrl(state.page)}" alt="${config.sutraTitle} page ${state.page}" loading="eager" referrerpolicy="no-referrer" />
           </div>
 
           <div class="reader-actions">
             <a href="${officialPageUrl(state.page)}" target="_blank" rel="noopener noreferrer">Open official page</a>
             <a href="${basicPageUrl(state.page)}" target="_blank" rel="noopener noreferrer">Basic page</a>
+          </div>
+          <div class="image-size-control">
+            <label for="image-size">Size</label>
+            <input id="image-size" type="range" min="70" max="100" step="2" value="${Math.round(state.pageImageScale * 100)}" />
+            <strong id="image-size-value">${formatScalePercent(state.pageImageScale)}</strong>
           </div>
           <p class="reader-hint">Use the floating side buttons to keep page tracking accurate.</p>
         </section>
@@ -263,12 +280,26 @@ function bindApp() {
     setPage(Number(event.target.value || 1));
   });
 
+  document.querySelector("#image-size")?.addEventListener("input", (event) => {
+    setPageImageScale(Number(event.target.value) / 100);
+  });
+
   document.querySelector(".history")?.addEventListener("click", (event) => {
     const button = event.target.closest(".delete-completion");
     if (!button) return;
 
     deleteCompletion(button.dataset.completionId, button.dataset.completedAt);
   });
+}
+
+function setPageImageScale(scale) {
+  const nextScale = Math.min(Math.max(scale, 0.7), 1);
+  state.pageImageScale = nextScale;
+  localStorage.setItem(pageImageScaleKey, String(nextScale));
+  document.querySelector(".sutra-page-image")?.style.setProperty("--page-image-scale", String(nextScale));
+
+  const value = document.querySelector("#image-size-value");
+  if (value) value.textContent = formatScalePercent(nextScale);
 }
 
 function updateFrameScale() {
