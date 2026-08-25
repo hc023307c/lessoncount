@@ -478,12 +478,26 @@ iframe {
 }
 
 .history li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
   padding-left: 4px;
 }
 
 .history time {
   display: block;
   font-weight: 800;
+}
+
+.delete-completion {
+  min-height: 34px;
+  border: 1px solid #d6cbb9;
+  padding: 0 10px;
+  background: #fffdfa;
+  color: #8b3a2b;
+  font-size: 0.78rem;
+  font-weight: 900;
 }
 
 .history span,

@@ -183,7 +183,16 @@ function render() {
             ${
               state.completions.length
                 ? `<ol>${state.completions
-                    .map((item) => `<li><time>${formatDateTime(item.completed_at)}</time><span>Page ${item.completed_page}</span></li>`)
+                    .map(
+                      (item) => `
+                        <li>
+                          <div>
+                            <time>${formatDateTime(item.completed_at)}</time>
+                            <span>Page ${item.completed_page}</span>
+                          </div>
+                          <button class="delete-completion" type="button" data-completion-id="${item.id}" data-completed-at="${item.completed_at}">Delete</button>
+                        </li>`,
+                    )
                     .join("")}</ol>`
                 : "<p>No completions yet.</p>"
             }
@@ -249,6 +258,12 @@ function bindApp() {
     setPage(Number(event.target.value || 1));
   });
 
+  document.querySelector(".history")?.addEventListener("click", (event) => {
+    const button = event.target.closest(".delete-completion");
+    if (!button) return;
+
+    deleteCompletion(button.dataset.completionId, button.dataset.completedAt);
+  });
 }
 
 function updateFrameScale() {
@@ -413,6 +428,27 @@ async function loadCompletions() {
     today: todayResult.count ?? 0,
     lastCompletionTime: state.completions[0]?.completed_at ?? null,
   };
+}
+
+async function deleteCompletion(id, completedAt) {
+  if (!state.user || !id) return;
+
+  const confirmed = window.confirm(`Delete this completion record?\n${formatDateTime(completedAt)}`);
+  if (!confirmed) return;
+
+  state.saving = true;
+  render();
+
+  const { error } = await supabase
+    .from("practice_completions")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", state.user.id);
+
+  state.saving = false;
+  state.notice = error ? error.message : "";
+  await loadCompletions();
+  render();
 }
 
 function cacheProgress() {
