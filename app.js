@@ -207,6 +207,7 @@ function render() {
 
   bindApp();
   updateFrameScale();
+  updateFloatingControls();
 }
 
 function bindAuth() {
@@ -270,6 +271,19 @@ function updateFrameScale() {
 
   frame.style.setProperty("--frame-scale", String(scale));
   frame.style.setProperty("--frame-native-height", `${nativeHeight}px`);
+}
+
+function updateFloatingControls() {
+  const viewport = window.visualViewport;
+  const scale = viewport?.scale ? 1 / viewport.scale : 1;
+  const top = viewport ? viewport.offsetTop + viewport.height * 0.56 : window.innerHeight * 0.56;
+  const right = viewport ? window.innerWidth - viewport.offsetLeft - viewport.width : 0;
+  const left = viewport ? viewport.offsetLeft : 0;
+
+  document.documentElement.style.setProperty("--control-scale", String(scale));
+  document.documentElement.style.setProperty("--control-top", `${top}px`);
+  document.documentElement.style.setProperty("--control-left", `${left}px`);
+  document.documentElement.style.setProperty("--control-right", `${right}px`);
 }
 
 async function loadSession() {
@@ -507,7 +521,13 @@ window.addEventListener("offline", () => {
   render();
 });
 
-window.addEventListener("resize", updateFrameScale);
+window.addEventListener("resize", () => {
+  updateFrameScale();
+  updateFloatingControls();
+});
+
+window.visualViewport?.addEventListener("resize", updateFloatingControls);
+window.visualViewport?.addEventListener("scroll", updateFloatingControls);
 
 render();
 loadSession();

@@ -306,31 +306,36 @@ iframe {
   inset: 0;
   z-index: 40;
   pointer-events: none;
+  --control-scale: 1;
+  --control-top: 56svh;
+  --control-left: 0px;
+  --control-right: 0px;
 }
 
 .floating-nav {
   position: fixed;
-  top: 50svh;
+  top: var(--control-top);
   z-index: 41;
   display: grid;
-  width: 52px;
-  height: 52px;
-  min-height: 52px;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
   place-items: center;
   border: 1px solid rgba(18, 83, 78, 0.5);
   border-radius: 999px;
   padding: 0;
-  background: rgba(126, 214, 207, 0.96);
+  background: rgba(126, 214, 207, 0.9);
   box-shadow:
-    inset 0 0 0 2px rgba(255, 255, 255, 0.58),
-    0 10px 28px rgba(30, 72, 68, 0.28);
+    inset 0 0 0 2px rgba(255, 255, 255, 0.5),
+    0 8px 22px rgba(30, 72, 68, 0.24);
   color: #083d39;
   pointer-events: auto;
-  transform: translateY(-50%);
+  transform: translateY(-50%) scale(var(--control-scale));
+  transform-origin: center;
 }
 
 .floating-nav::before {
-  font-size: 2.5rem;
+  font-size: 2.15rem;
   line-height: 1;
 }
 
@@ -340,7 +345,7 @@ iframe {
 }
 
 .floating-nav-left {
-  left: max(12px, env(safe-area-inset-left));
+  left: calc(var(--control-left) + max(4px, env(safe-area-inset-left)));
 }
 
 .floating-nav-left::before {
@@ -349,14 +354,15 @@ iframe {
 
 .floating-next-group {
   position: fixed;
-  top: 50svh;
-  right: max(12px, env(safe-area-inset-right));
+  top: var(--control-top);
+  right: calc(var(--control-right) + max(4px, env(safe-area-inset-right)));
   z-index: 41;
   display: grid;
-  gap: 8px;
+  gap: 5px;
   justify-items: center;
   pointer-events: none;
-  transform: translateY(-50%);
+  transform: translateY(-50%) scale(var(--control-scale));
+  transform-origin: center right;
 }
 
 .floating-next-group .floating-nav {
@@ -369,14 +375,14 @@ iframe {
 }
 
 .finish-nav {
-  width: 74px;
+  width: 62px;
   border-radius: 999px;
-  background: rgba(126, 214, 207, 0.98);
+  background: rgba(126, 214, 207, 0.94);
 }
 
 .finish-nav::before {
   content: "Finish";
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: 900;
 }
 
@@ -389,13 +395,13 @@ iframe {
 }
 
 .today-badge {
-  min-width: 74px;
+  min-width: 62px;
   border: 1px solid rgba(18, 83, 78, 0.44);
   border-radius: 999px;
-  padding: 5px 8px;
-  background: rgba(255, 253, 250, 0.96);
+  padding: 4px 7px;
+  background: rgba(255, 253, 250, 0.9);
   color: #083d39;
-  font-size: 0.82rem;
+  font-size: 0.72rem;
   font-weight: 900;
   line-height: 1;
   text-align: center;
@@ -505,15 +511,18 @@ footer {
   }
 
   .floating-nav {
-    width: 42px;
-    height: 42px;
-    min-height: 42px;
-    font-size: 2.1rem;
+    width: 40px;
+    height: 40px;
+    min-height: 40px;
   }
 
   .finish-nav {
-    min-width: 68px;
-    font-size: 0.82rem;
+    width: 58px;
+  }
+
+  .today-badge {
+    min-width: 58px;
+    font-size: 0.68rem;
   }
 }
 
