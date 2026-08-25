@@ -276,8 +276,6 @@ code {
   overflow: hidden;
   --frame-native-width: 910px;
   --frame-native-height: 760px;
-  --frame-crop-top: 12px;
-  --frame-crop-bottom: 28px;
   --frame-scale: 1;
   height: calc(var(--frame-native-height) * var(--frame-scale));
   border-top: 1px solid #e8dece;
@@ -288,11 +286,10 @@ code {
 iframe {
   display: block;
   width: 100%;
-  height: calc(var(--frame-native-height) + var(--frame-crop-top) + var(--frame-crop-bottom));
+  height: var(--frame-native-height);
   border: 0;
   background: #fff;
   pointer-events: none;
-  transform: translateY(calc(var(--frame-crop-top) * -1));
   user-select: none;
 }
 
