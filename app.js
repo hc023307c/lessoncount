@@ -154,12 +154,6 @@ function render() {
 
           <div class="reader-frame">
             <iframe title="${config.sutraTitle} official source page ${state.page}" src="${officialPageUrl(state.page)}" loading="lazy" referrerpolicy="no-referrer"></iframe>
-            <button id="previous-page" class="frame-nav frame-nav-left" type="button" ${state.page <= 1 ? "disabled" : ""} aria-label="Previous page">
-              <span>Previous</span>
-            </button>
-            <button id="next-page" class="frame-nav frame-nav-right ${completionAvailable ? "finish-nav" : ""}" type="button" aria-label="${completionAvailable ? "Finish practice and go to page 1" : "Next page"}">
-              <span>${completionAvailable ? "Finish" : "Next"}</span>
-            </button>
           </div>
 
           <div class="reader-actions">
@@ -195,6 +189,18 @@ function render() {
         <span>Official source only. Sutra content is not copied or redistributed.</span>
         <a href="${config.sourceUrl}" target="_blank" rel="noopener noreferrer">Attribution</a>
       </footer>
+
+      <div class="fixed-reader-controls" aria-label="Reading controls">
+        <button id="previous-page" class="floating-nav floating-nav-left" type="button" ${state.page <= 1 ? "disabled" : ""} aria-label="Previous page">
+          <span>Previous</span>
+        </button>
+        <div class="floating-next-group">
+          <button id="next-page" class="floating-nav floating-nav-right ${completionAvailable ? "finish-nav" : ""}" type="button" aria-label="${completionAvailable ? "Finish practice and go to page 1" : "Next page"}">
+            <span>${completionAvailable ? "Finish" : "Next"}</span>
+          </button>
+          <div class="today-badge">Today ${state.stats.today}</div>
+        </div>
+      </div>
 
     </main>
   `;
