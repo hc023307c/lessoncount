@@ -412,6 +412,12 @@ function toggleStatsPanel() {
   state.statsExpanded = !state.statsExpanded;
   localStorage.setItem(statsExpandedKey, String(state.statsExpanded));
   render();
+
+  if (state.statsExpanded) {
+    requestAnimationFrame(() => {
+      document.querySelector(".stats-panel")?.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
+  }
 }
 
 function setPageImageScale(scale) {

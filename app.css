@@ -645,6 +645,23 @@ footer {
   }
 }
 
+@media (max-width: 719px) {
+  .app-shell {
+    padding-bottom: max(86px, calc(env(safe-area-inset-bottom) + 74px));
+  }
+
+  .stats-toggle {
+    position: fixed;
+    right: max(10px, env(safe-area-inset-right));
+    bottom: max(12px, env(safe-area-inset-bottom));
+    left: max(10px, env(safe-area-inset-left));
+    z-index: 50;
+    width: auto;
+    margin: 0;
+    box-shadow: 0 10px 28px rgba(30, 72, 68, 0.22);
+  }
+}
+
 @media (min-width: 720px) {
   .app-shell {
     padding: max(18px, env(safe-area-inset-top)) 22px max(24px, env(safe-area-inset-bottom));
