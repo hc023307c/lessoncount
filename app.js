@@ -11,6 +11,10 @@ const config = {
   authRedirectUrl: runtimeConfig.authRedirectUrl || `${window.location.origin}${window.location.pathname}`,
 };
 
+const localPreview =
+  ["localhost", "127.0.0.1"].includes(window.location.hostname) &&
+  new URLSearchParams(window.location.search).has("preview");
+
 const supabase =
   config.supabaseUrl && config.supabaseAnonKey
     ? createClient(config.supabaseUrl, config.supabaseAnonKey, {
@@ -26,20 +30,70 @@ const supabase =
 const progressCacheKey = "lessoncount.progress";
 const pendingPageKey = "lessoncount.pendingPage";
 const pageImageScaleKey = "lessoncount.pageImageScale";
+const statsExpandedKey = "lessoncount.statsExpanded";
+
+const practiceSections = [
+  {
+    key: "opening",
+    label: "普門品開經偈",
+    shortLabel: "開經偈",
+    startPage: 1,
+    endPage: 9,
+    mode: "daily",
+    nextSection: "main",
+  },
+  {
+    key: "main",
+    label: "普門品本文",
+    shortLabel: "普門品",
+    startPage: 10,
+    endPage: 41,
+    mode: "repeat",
+    nextSection: "main",
+  },
+  {
+    key: "mantra",
+    label: "大悲咒",
+    shortLabel: "大悲咒",
+    startPage: 43,
+    endPage: 49,
+    mode: "repeat",
+    nextSection: "mantra",
+  },
+  {
+    key: "closing",
+    label: "迴向儀軌",
+    shortLabel: "迴向",
+    startPage: 50,
+    endPage: 54,
+    mode: "daily",
+    nextSection: "closing",
+  },
+];
+
+const sectionMap = Object.fromEntries(practiceSections.map((section) => [section.key, section]));
+const defaultSectionKey = "main";
 
 const state = {
   session: null,
   user: null,
+  activeSection: defaultSectionKey,
   page: 1,
   cycleStartedAt: new Date().toISOString(),
   currentCycleCompleted: false,
-  stats: { total: 0, today: 0, lastCompletionTime: null },
+  stats: {
+    total: 0,
+    today: 0,
+    bySection: {},
+    lastCompletionTime: null,
+  },
   completions: [],
   saving: false,
   online: navigator.onLine,
   notice: "",
   ignoreNextFrameLoad: true,
   pageImageScale: loadPageImageScale(),
+  statsExpanded: loadStatsExpanded(),
 };
 
 const app = document.querySelector("#app");
@@ -47,6 +101,19 @@ const app = document.querySelector("#app");
 function clampPage(page, totalPages = config.totalPages) {
   if (!Number.isFinite(page)) return 1;
   return Math.min(Math.max(Math.round(page), 1), totalPages);
+}
+
+function getSection(key = state.activeSection) {
+  return sectionMap[key] || sectionMap[defaultSectionKey];
+}
+
+function sectionForPage(page) {
+  return practiceSections.find((section) => page >= section.startPage && page <= section.endPage) || getSection();
+}
+
+function clampSectionPage(page, section = getSection()) {
+  if (!Number.isFinite(page)) return section.startPage;
+  return Math.min(Math.max(Math.round(page), section.startPage), section.endPage);
 }
 
 function officialPageUrl(page) {
@@ -66,8 +133,17 @@ function basicPageUrl(page) {
     : `${config.basicHtmlBaseUrl}/page${safePage}.html`;
 }
 
-function canComplete(page, isCompleted) {
-  return page >= config.totalPages && !isCompleted;
+function canComplete(page, isCompleted, section = getSection()) {
+  return page >= section.endPage && !isCompleted;
+}
+
+function sectionStats(sectionKey) {
+  return state.stats.bySection?.[sectionKey] || { total: 0, today: 0, lastCompletionTime: null };
+}
+
+function hasDoneDailySection(sectionKey) {
+  const section = getSection(sectionKey);
+  return section.mode === "daily" && sectionStats(sectionKey).today > 0;
 }
 
 function loadPageImageScale() {
@@ -80,6 +156,13 @@ function formatScalePercent(scale) {
   return `${Math.round(scale * 100)}%`;
 }
 
+function loadStatsExpanded() {
+  const stored = localStorage.getItem(statsExpandedKey);
+  if (stored === "true") return true;
+  if (stored === "false") return false;
+  return window.innerWidth >= 720;
+}
+
 function localDayRange(now = new Date()) {
   const start = new Date(now);
   start.setHours(0, 0, 0, 0);
@@ -90,12 +173,18 @@ function localDayRange(now = new Date()) {
   return { startIso: start.toISOString(), endIso: end.toISOString() };
 }
 
+function isToday(value) {
+  if (!value) return false;
+  const { startIso, endIso } = localDayRange();
+  return value >= startIso && value < endIso;
+}
+
 function formatDateTime(value) {
   return value ? new Date(value).toLocaleString() : "None";
 }
 
 function render() {
-  if (!supabase) {
+  if (!supabase && !localPreview) {
     app.innerHTML = `
       <main class="shell">
         <section class="empty-state">
@@ -128,8 +217,12 @@ function render() {
     return;
   }
 
-  const completionAvailable = canComplete(state.page, state.currentCycleCompleted);
-  const progressPercent = Math.round((state.page / config.totalPages) * 100);
+  const activeSection = getSection();
+  const activeStats = sectionStats(activeSection.key);
+  const sectionPageCount = activeSection.endPage - activeSection.startPage + 1;
+  const sectionPageIndex = state.page - activeSection.startPage + 1;
+  const completionAvailable = canComplete(state.page, state.currentCycleCompleted, activeSection);
+  const progressPercent = Math.round((sectionPageIndex / sectionPageCount) * 100);
   const cycleLabel = state.currentCycleCompleted ? "Cycle counted" : "Current cycle active";
   state.ignoreNextFrameLoad = true;
 
@@ -148,12 +241,23 @@ function render() {
 
       <div class="practice-layout">
         <section class="reader">
+          <nav class="section-tabs" aria-label="Practice sections">
+            ${practiceSections
+              .map(
+                (section) => `
+                  <button class="section-tab ${section.key === activeSection.key ? "active" : ""}" type="button" data-section-key="${section.key}">
+                    <span>${section.shortLabel}</span>
+                    <strong>${section.mode === "daily" ? (sectionStats(section.key).today ? "Done" : "Today") : `Today ${sectionStats(section.key).today}`}</strong>
+                  </button>`,
+              )
+              .join("")}
+          </nav>
           ${
             completionAvailable
               ? `<div class="completion-banner">
                   <div>
-                    <strong>Final page reached</strong>
-                    <span>Tap the right side to count this practice and return to page 1.</span>
+                    <strong>${activeSection.shortLabel} final page reached</strong>
+                    <span>Tap the right side to ${activeSection.mode === "repeat" ? "count this cycle" : "mark today"}.</span>
                   </div>
                 </div>`
               : ""
@@ -162,15 +266,15 @@ function render() {
             <form id="page-form" class="page-form">
               <label for="page-input">Page</label>
               <div class="page-input-row">
-                <input id="page-input" name="page" type="number" min="1" max="${config.totalPages}" value="${state.page}" />
-                <span>/ ${config.totalPages}</span>
+                <input id="page-input" name="page" type="number" min="${activeSection.startPage}" max="${activeSection.endPage}" value="${state.page}" />
+                <span>${activeSection.startPage}-${activeSection.endPage}</span>
               </div>
             </form>
             <div class="mini-progress">
               <div class="progress-track" aria-label="Reading progress">
                 <span style="width: ${progressPercent}%"></span>
               </div>
-              <small>${progressPercent}% complete</small>
+              <small>${activeSection.label} / ${progressPercent}% complete</small>
             </div>
           </div>
 
@@ -190,12 +294,18 @@ function render() {
           <p class="reader-hint">Use the floating side buttons to keep page tracking accurate.</p>
         </section>
 
-        <aside class="stats-panel" aria-label="Practice records">
+        <button id="stats-toggle" class="stats-toggle" type="button" aria-expanded="${state.statsExpanded}">
+          ${state.statsExpanded ? "Hide records" : "Show records"}
+        </button>
+
+        <aside class="stats-panel ${state.statsExpanded ? "expanded" : "collapsed"}" aria-label="Practice records">
           <section class="dashboard">
-            <article><span>Total completed</span><strong>${state.stats.total}</strong></article>
-            <article><span>Today</span><strong>${state.stats.today}</strong></article>
+            <article><span>普門品 Today / Total</span><strong>${sectionStats("main").today} / ${sectionStats("main").total}</strong></article>
+            <article><span>大悲咒 Today / Total</span><strong>${sectionStats("mantra").today} / ${sectionStats("mantra").total}</strong></article>
+            <article><span>開經偈 Today</span><strong>${sectionStats("opening").today ? "Done" : "Not yet"}</strong></article>
+            <article><span>迴向 Today</span><strong>${sectionStats("closing").today ? "Done" : "Not yet"}</strong></article>
             <article><span>Last completion</span><strong>${formatDateTime(state.stats.lastCompletionTime)}</strong></article>
-            <article><span>Status</span><strong>${cycleLabel}</strong></article>
+            <article><span>Status</span><strong>${activeSection.shortLabel} ${cycleLabel}</strong></article>
           </section>
 
           <section class="history">
@@ -210,7 +320,7 @@ function render() {
                         <li>
                           <div>
                             <time>${formatDateTime(item.completed_at)}</time>
-                            <span>Page ${item.completed_page}</span>
+                            <span>${getSection(item.section_key).shortLabel} / Page ${item.completed_page}</span>
                           </div>
                           <button class="delete-completion" type="button" data-completion-id="${item.id}" data-completed-at="${item.completed_at}">Delete</button>
                         </li>`,
@@ -228,14 +338,14 @@ function render() {
       </footer>
 
       <div class="fixed-reader-controls" aria-label="Reading controls">
-        <button id="previous-page" class="floating-nav floating-nav-left" type="button" ${state.page <= 1 ? "disabled" : ""} aria-label="Previous page">
+        <button id="previous-page" class="floating-nav floating-nav-left" type="button" ${state.page <= activeSection.startPage ? "disabled" : ""} aria-label="Previous page">
           <span>Previous</span>
         </button>
         <div class="floating-next-group">
-          <button id="next-page" class="floating-nav floating-nav-right ${completionAvailable ? "finish-nav" : ""}" type="button" aria-label="${completionAvailable ? "Finish practice and go to page 1" : "Next page"}">
+          <button id="next-page" class="floating-nav floating-nav-right ${completionAvailable ? "finish-nav" : ""}" type="button" aria-label="${completionAvailable ? `Finish ${activeSection.shortLabel}` : "Next page"}">
             <span>${completionAvailable ? "Finish" : "Next"}</span>
           </button>
-          <div class="today-badge">Today ${state.stats.today}</div>
+          <div class="today-badge">Today ${activeStats.today}</div>
         </div>
       </div>
 
@@ -268,6 +378,10 @@ function bindApp() {
     await supabase.auth.signOut();
   });
 
+  document.querySelectorAll(".section-tab").forEach((button) => {
+    button.addEventListener("click", () => switchSection(button.dataset.sectionKey));
+  });
+
   document.querySelector("#previous-page")?.addEventListener("click", () => setPage(state.page - 1));
   document.querySelector("#next-page")?.addEventListener("click", advancePage);
   document.querySelector("#page-form")?.addEventListener("submit", (event) => {
@@ -284,12 +398,20 @@ function bindApp() {
     setPageImageScale(Number(event.target.value) / 100);
   });
 
+  document.querySelector("#stats-toggle")?.addEventListener("click", toggleStatsPanel);
+
   document.querySelector(".history")?.addEventListener("click", (event) => {
     const button = event.target.closest(".delete-completion");
     if (!button) return;
 
     deleteCompletion(button.dataset.completionId, button.dataset.completedAt);
   });
+}
+
+function toggleStatsPanel() {
+  state.statsExpanded = !state.statsExpanded;
+  localStorage.setItem(statsExpandedKey, String(state.statsExpanded));
+  render();
 }
 
 function setPageImageScale(scale) {
@@ -300,6 +422,17 @@ function setPageImageScale(scale) {
 
   const value = document.querySelector("#image-size-value");
   if (value) value.textContent = formatScalePercent(nextScale);
+}
+
+async function switchSection(sectionKey) {
+  const section = getSection(sectionKey);
+  state.activeSection = section.key;
+  state.page = section.startPage;
+  state.cycleStartedAt = new Date().toISOString();
+  state.currentCycleCompleted = hasDoneDailySection(section.key);
+  cacheProgress();
+  render();
+  await saveProgress();
 }
 
 function updateFrameScale() {
@@ -337,6 +470,18 @@ function updateFloatingControls() {
 }
 
 async function loadSession() {
+  if (localPreview) {
+    state.session = { user: { id: "local-preview" } };
+    state.user = state.session.user;
+    const requestedPage = clampPage(Number(new URLSearchParams(window.location.search).get("page")) || state.page);
+    state.activeSection = sectionForPage(requestedPage).key;
+    state.page = clampSectionPage(requestedPage);
+    state.stats = { total: 0, today: 0, bySection: {}, lastCompletionTime: null };
+    state.completions = [];
+    render();
+    return;
+  }
+
   if (!supabase) {
     render();
     return;
@@ -407,7 +552,8 @@ function loadLocalProgress() {
 
   try {
     const progress = JSON.parse(cached);
-    state.page = clampPage(progress.current_page);
+    state.activeSection = progress.current_section || progress.active_section || sectionForPage(Number(progress.current_page)).key;
+    state.page = clampSectionPage(progress.current_page, getSection(state.activeSection));
     state.cycleStartedAt = progress.cycle_started_at || state.cycleStartedAt;
     state.currentCycleCompleted = Boolean(progress.current_cycle_completed);
   } catch {
@@ -416,11 +562,11 @@ function loadLocalProgress() {
 }
 
 async function loadProgress() {
-  if (!state.user) return;
+  if (!state.user || localPreview) return;
 
   const { data, error } = await supabase
     .from("reading_progress")
-    .select("current_page, cycle_started_at, current_cycle_completed, updated_at")
+    .select("current_page, current_section, cycle_started_at, current_cycle_completed, updated_at")
     .eq("user_id", state.user.id)
     .maybeSingle();
 
@@ -430,7 +576,8 @@ async function loadProgress() {
   }
 
   if (data) {
-    state.page = clampPage(data.current_page);
+    state.activeSection = data.current_section || sectionForPage(data.current_page).key;
+    state.page = clampSectionPage(data.current_page, getSection(state.activeSection));
     state.cycleStartedAt = data.cycle_started_at;
     state.currentCycleCompleted = data.current_cycle_completed;
     cacheProgress();
@@ -440,35 +587,59 @@ async function loadProgress() {
 }
 
 async function loadCompletions() {
-  if (!state.user) return;
+  if (!state.user || localPreview) return;
 
   const today = localDayRange();
-  const [{ data, error, count }, todayResult] = await Promise.all([
+  const [{ data, error, count }, todayResult, allResult] = await Promise.all([
     supabase
       .from("practice_completions")
-      .select("id, completed_at, cycle_started_at, completed_page", { count: "exact" })
+      .select("id, section_key, completed_at, cycle_started_at, completed_page", { count: "exact" })
       .eq("user_id", state.user.id)
       .order("completed_at", { ascending: false })
       .limit(25),
     supabase
       .from("practice_completions")
-      .select("id", { count: "exact", head: true })
+      .select("id, section_key, completed_at")
       .eq("user_id", state.user.id)
       .gte("completed_at", today.startIso)
       .lt("completed_at", today.endIso),
+    supabase
+      .from("practice_completions")
+      .select("id, section_key")
+      .eq("user_id", state.user.id),
   ]);
 
-  if (error || todayResult.error) {
-    state.notice = error?.message || todayResult.error?.message || "";
+  if (error || todayResult.error || allResult.error) {
+    state.notice = error?.message || todayResult.error?.message || allResult.error?.message || "";
     return;
   }
 
   state.completions = data || [];
+  const bySection = summarizeCompletions(allResult.data || [], todayResult.data || []);
   state.stats = {
     total: count ?? state.completions.length,
-    today: todayResult.count ?? 0,
+    today: Object.values(bySection).reduce((sum, item) => sum + item.today, 0),
+    bySection,
     lastCompletionTime: state.completions[0]?.completed_at ?? null,
   };
+}
+
+function summarizeCompletions(allCompletions, todayCompletions) {
+  const summary = Object.fromEntries(practiceSections.map((section) => [section.key, { total: 0, today: 0 }]));
+
+  allCompletions.forEach((item) => {
+    const key = item.section_key || defaultSectionKey;
+    if (!summary[key]) summary[key] = { total: 0, today: 0 };
+    summary[key].total += 1;
+  });
+
+  todayCompletions.forEach((item) => {
+    const key = item.section_key || defaultSectionKey;
+    if (!summary[key]) summary[key] = { total: 0, today: 0 };
+    summary[key].today += 1;
+  });
+
+  return summary;
 }
 
 async function deleteCompletion(id, completedAt) {
@@ -479,6 +650,20 @@ async function deleteCompletion(id, completedAt) {
 
   state.saving = true;
   render();
+
+  if (localPreview) {
+    state.completions = state.completions.filter((item) => item.id !== id);
+    const bySection = summarizeCompletions(state.completions, state.completions.filter((item) => isToday(item.completed_at)));
+    state.stats = {
+      total: state.completions.length,
+      today: Object.values(bySection).reduce((sum, item) => sum + item.today, 0),
+      bySection,
+      lastCompletionTime: state.completions[0]?.completed_at ?? null,
+    };
+    state.saving = false;
+    render();
+    return;
+  }
 
   const { error } = await supabase
     .from("practice_completions")
@@ -497,6 +682,7 @@ function cacheProgress() {
     progressCacheKey,
     JSON.stringify({
       current_page: state.page,
+      current_section: state.activeSection,
       cycle_started_at: state.cycleStartedAt,
       current_cycle_completed: state.currentCycleCompleted,
       updated_at: new Date().toISOString(),
@@ -505,14 +691,16 @@ function cacheProgress() {
 }
 
 async function setPage(page) {
-  state.page = clampPage(page);
+  const section = getSection();
+  state.page = clampSectionPage(page, section);
   cacheProgress();
   render();
   await saveProgress();
 }
 
 async function advancePage() {
-  if (state.page >= config.totalPages) {
+  const section = getSection();
+  if (state.page >= section.endPage) {
     await finishAndStartNextCycle();
     return;
   }
@@ -524,7 +712,7 @@ async function finishAndStartNextCycle() {
   if (!state.user) return;
 
   if (state.currentCycleCompleted) {
-    await startNewCycle();
+    await startNewCycle(getSection().nextSection);
     return;
   }
 
@@ -532,7 +720,7 @@ async function finishAndStartNextCycle() {
 }
 
 async function saveProgress() {
-  if (!state.user) return;
+  if (!state.user || localPreview) return;
 
   cacheProgress();
   if (!navigator.onLine) {
@@ -546,6 +734,7 @@ async function saveProgress() {
   const { error } = await supabase.from("reading_progress").upsert({
     user_id: state.user.id,
     current_page: state.page,
+    current_section: state.activeSection,
     cycle_started_at: state.cycleStartedAt,
     current_cycle_completed: state.currentCycleCompleted,
     updated_at: new Date().toISOString(),
@@ -571,7 +760,8 @@ async function flushPendingPage() {
 }
 
 async function completeCycle(options = {}) {
-  if (!state.user || !canComplete(state.page, state.currentCycleCompleted)) return;
+  const section = getSection();
+  if (!state.user || !canComplete(state.page, state.currentCycleCompleted, section)) return;
 
   const shouldConfirm = options.confirm ?? true;
   const shouldRestart = options.restart ?? false;
@@ -580,10 +770,45 @@ async function completeCycle(options = {}) {
     if (!confirmed) return;
   }
 
+  if (localPreview) {
+    const completedAt = new Date().toISOString();
+    state.completions = [
+      {
+        id: crypto.randomUUID?.() || String(Date.now()),
+        section_key: section.key,
+        completed_at: completedAt,
+        completed_page: section.endPage,
+        cycle_started_at: state.cycleStartedAt,
+      },
+      ...state.completions,
+    ];
+    const bySection = summarizeCompletions(state.completions, state.completions.filter((item) => isToday(item.completed_at)));
+    state.stats = {
+      total: state.completions.length,
+      today: Object.values(bySection).reduce((sum, item) => sum + item.today, 0),
+      bySection,
+      lastCompletionTime: completedAt,
+    };
+
+    if (shouldRestart) {
+      state.activeSection = section.nextSection;
+      state.page = getSection(section.nextSection).startPage;
+      state.cycleStartedAt = new Date().toISOString();
+      state.currentCycleCompleted = false;
+    } else {
+      state.currentCycleCompleted = true;
+    }
+
+    cacheProgress();
+    render();
+    return;
+  }
+
   const { error } = await supabase.from("practice_completions").insert({
     user_id: state.user.id,
+    section_key: section.key,
     cycle_started_at: state.cycleStartedAt,
-    completed_page: config.totalPages,
+    completed_page: section.endPage,
   });
 
   if (error) {
@@ -595,9 +820,10 @@ async function completeCycle(options = {}) {
   }
 
   if (shouldRestart) {
-    state.page = 1;
+    state.activeSection = section.nextSection;
+    state.page = getSection(section.nextSection).startPage;
     state.cycleStartedAt = new Date().toISOString();
-    state.currentCycleCompleted = false;
+    state.currentCycleCompleted = hasDoneDailySection(state.activeSection);
     cacheProgress();
     await saveProgress();
     await loadCompletions();
@@ -611,10 +837,12 @@ async function completeCycle(options = {}) {
   render();
 }
 
-async function startNewCycle() {
-  state.page = 1;
+async function startNewCycle(sectionKey = state.activeSection) {
+  const section = getSection(sectionKey);
+  state.activeSection = section.key;
+  state.page = section.startPage;
   state.cycleStartedAt = new Date().toISOString();
-  state.currentCycleCompleted = false;
+  state.currentCycleCompleted = hasDoneDailySection(section.key);
   cacheProgress();
   await saveProgress();
   render();
